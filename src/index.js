@@ -7,9 +7,194 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
+// var url = require("url");
+import { Buffer } from "node:buffer";
+globalThis.Buffer = Buffer;
+import xml2js from "xml2js";
 
+async function getCbrRates(date) {
+	//	const url = 'http://www.cbr.ru/scripts/XML_daily.asp?date_req=08/12/2025'; // Пример с конкретной датой
+	const url = `http://www.cbr.ru/scripts/XML_daily.asp?date_req=${date}`; // Пример с конкретной датой
+
+	console.log(url)
+
+	try {
+		const response = await fetch(url);
+		const arr = await response.arrayBuffer();
+		const txt = (new TextDecoder('windows-1251').decode(arr))
+		return txt
+		//const xmlText = await response.text();
+		//return xmlText;
+	} catch (error) {
+		console.error("Ошибка при загрузке XML:", error);
+		return "Hello!";
+	}
+}
+const b64str =
+	"AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA/4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQABAREAEREBAAEBARAQAREREBEAEBEAEBAQEAAQEQEQEBAQABAQAQAREBAAEBABAAEQEAAQEAEAAQAQABAREQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AAB//wAAdGEAAHUsAAAJpgAAq6QAAKutAACLrQAAy60AANuhAAD//wAA//8AAP//AAD//wAA"
+
+function formatDateDDMMYYYY(date) {
+	const d = date ? (date instanceof Date ? date : new Date(date)) : new Date();
+
+	const day = String(d.getDate()).padStart(2, "0");
+	const month = String(d.getMonth() + 1).padStart(2, "0"); // months are 0-based
+	const year = d.getFullYear();
+
+	return `${day}/${month}/${year}`;
+}
+
+function escapeHtml(str = "") {
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
 export default {
+
 	async fetch(request, env, ctx) {
-		return new Response('Hello World!');
+
+		let myDate = new Date().toLocaleString('en-US', {
+			timeZone: 'Europe/Moscow'
+		});;
+		const url = new URL(request.url);
+		//const { searchParams } = new URL(request.url)
+		const dateReq = url.searchParams.get('date_req')
+
+		console.log(url.pathname + '   ' + dateReq)
+		const dateMatchReq = /(\d{2})\/(\d{2})\/(\d{4})/.exec(dateReq)
+		if (dateMatchReq) {
+			myDate = new Date(`${dateMatchReq[2]}/${dateMatchReq[1]}/${dateMatchReq[3]}`).toLocaleString('en-US', {
+				timeZone: 'Europe/Moscow'
+			});
+			console.log(`${dateMatchReq[2]}/${dateMatchReq[1]}/${dateMatchReq[3]}` + ' ' + myDate);
+		}
+		console.log('myDate: ' + myDate + ' ' + myDate.timeZone);
+
+		if (url.pathname == "/favicon.ico") {
+			const buf = Buffer.from(b64str, 'base64')
+
+			return new Response(
+				buf,
+				{
+					status: 200,
+					headers: {
+						"Content-Length": buf.length,
+						"Content-Type": "image/x-icon"
+					}
+				}
+
+
+
+			)
+		} else {
+			const xmlCbrRatesString = await getCbrRates(formatDateDDMMYYYY(myDate))
+			let jsn
+
+			if (url.pathname == "/api/v01/xml") {
+				return new Response(xmlCbrRatesString, {
+					headers: {
+						"Content-Type": "application/xml; charset=UTF-8"
+					}
+				});
+			} else if (url.pathname == "/api/v01/json") {
+				xml2js.parseString(xmlCbrRatesString, { explicitArray: false, mergeAttrs: true }, (err, result) => {
+					if (err) throw err;
+
+					// JS object
+					//console.log(result);
+
+					// JSON string
+					jsn = JSON.stringify(result, null, 8);
+					//fs.writeFileSync("output.json", json);
+				});
+				return new Response(jsn, {
+					headers: {
+						"Content-Type": "application/json; charset=UTF-8"
+					}
+				});
+			} else if (url.pathname == "/index.html") {
+				let items;
+				let myCaption;
+				xml2js.parseString(xmlCbrRatesString, { explicitArray: false, mergeAttrs: true }, (err, result) => {
+
+					if (err) throw err;
+					myCaption=`${result.ValCurs.Date} ${result.ValCurs.name}`
+					// JS object
+					//console.log(result);
+
+					items = Array.isArray(result.ValCurs.Valute) ? result.ValCurs.Valute : [result.ValCurs.Valute]
+				});
+				const headers = ["NumCode", "CharCode", "Nominal", "Name", "Value", "VunitRate"];
+				const rowsHtml = items
+					.map(v => {
+						const cells = headers
+							.map(h => `<td>${escapeHtml(v[h])}</td>`)
+							.join("");
+						return `<tr>${cells}</tr>`;
+					})
+					.join("");
+
+
+				const tableHtml = `
+<table>
+  <caption>${myCaption}</caption>
+  <thead>
+    <tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>
+  </thead>
+  <tbody>
+    ${rowsHtml}
+  </tbody>
+</table>
+`;
+
+				return new Response(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seva BBS</title>
+<style>
+html { color-scheme: dark; }
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+table th { background-color: #555 }
+table td, th {
+  padding: .4em;
+}
+table tr:nth-child(even) {
+  background-color: #333; /* dark gray */  
+}
+</style>
+</head>
+<body>
+${tableHtml}
+</body>
+</html>
+`,
+					{
+						headers: {
+							"Content-Type": "text/html; charset=UTF-8"
+						}
+					},
+				);
+
+
+
+				// JSON string
+				//jsn = JSON.stringify(result, null, 8);
+				//fs.writeFileSync("output.json", json);
+
+
+			}
+			return new Response(`${myDate}`)
+
+		}
 	},
 };
+
+
