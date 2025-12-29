@@ -115,18 +115,22 @@ export default {
 					}
 				});
 			} else if (url.pathname == "/index.html") {
+				const { cf } = request || {};
+				const { country, city } = cf || {};
+				
+				console.log(`country: ${country}, city: ${city}, cf-connecting-ip: ${request.headers.get('cf-connecting-ip')}`)
 				let items;
 				let myCaption;
 				xml2js.parseString(xmlCbrRatesString, { explicitArray: false, mergeAttrs: true }, (err, result) => {
 
 					if (err) throw err;
-					myCaption=`${result.ValCurs.Date} ${result.ValCurs.name}`
+					myCaption = `${result.ValCurs.Date} ${result.ValCurs.name}`
 					// JS object
 					//console.log(result);
 
 					items = Array.isArray(result.ValCurs.Valute) ? result.ValCurs.Valute : [result.ValCurs.Valute]
 				});
-				const headers = ["NumCode", "CharCode", "Nominal", "Name", "Value", "VunitRate"];
+				const headers = ["ID","NumCode", "CharCode", "Nominal", "Name", "Value", "VunitRate"];
 				const rowsHtml = items
 					.map(v => {
 						const cells = headers
@@ -158,9 +162,14 @@ export default {
 <title>Seva BBS</title>
 <style>
 html { color-scheme: dark; }
+body {
+  display: flex;
+  flex-direction: column;			
+}
 table {
   margin-left: auto;
   margin-right: auto;
+  margin-bottom: 2em;
 }
 table th { background-color: #555 }
 table td, th {
@@ -169,10 +178,45 @@ table td, th {
 table tr:nth-child(even) {
   background-color: #333; /* dark gray */  
 }
+#startDate {
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1em;
+  margin-top: 1em;
+  width: auto;
+}
 </style>
 </head>
 <body>
+    <input type="date" id="startDate" value="2017-06-01" />
 ${tableHtml}
+<script>
+        //const dateControl = document.querySelector('input[type="date"]');
+		const dateControl = document.getElementById('startDate');
+        const urlParams = new URLSearchParams(window.location.search);
+        var date_req = urlParams.get('date_req');
+        var d;
+        if (date_req) {
+            var s = date_req.split('/');
+            d = new Date(s[2], s[1] - 1, s[0]);
+            dateControl.value = \`\${d.getFullYear()}-\${String(d.getMonth() + 1).padStart(2, '0')}-\${String(d.getDate()).padStart(2, '0')}\`;
+        } else {
+            d = new Date();
+            dateControl.value = \`\${d.getFullYear()}-\${String(d.getMonth() + 1).padStart(2, '0')}-\${String(d.getDate()).padStart(2, '0')}\`; // "2017-06-01";
+        }
+
+		startDate.addEventListener('change', (e) => {
+            let startDateVal = e.target.value
+            // document.getElementById('startDateSelected').innerText = startDateVal
+            const startDateValSplited = startDateVal.split("-")
+            const startDateValNewFormat = \`\${startDateValSplited[2]}/\${startDateValSplited[1]}/\${startDateValSplited[0]}\`
+            console.log(startDateValNewFormat)
+            window.location.href = \`index.html?date_req=\${startDateValNewFormat}\`;
+            //document.getElementsByTagName("table")[0].tBodies[0].innerHTML=''
+
+        })
+
+</script>
 </body>
 </html>
 `,
