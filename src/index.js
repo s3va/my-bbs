@@ -16,7 +16,7 @@ async function getCbrRates(date) {
 	//	const url = 'http://www.cbr.ru/scripts/XML_daily.asp?date_req=08/12/2025'; // Пример с конкретной датой
 	const url = `http://www.cbr.ru/scripts/XML_daily.asp?date_req=${date}`; // Пример с конкретной датой
 
-	console.log(url)
+	// console.log(url)
 
 	try {
 		const response = await fetch(url);
@@ -55,6 +55,9 @@ export default {
 
 	async fetch(request, env, ctx) {
 
+		const { cf } = request || {};
+		const { country, city, region, regionCode, timezone, longitude, latitude, postalCode, continent } = cf || {};
+
 		let myDate = new Date().toLocaleString('en-US', {
 			timeZone: 'Europe/Moscow'
 		});;
@@ -62,19 +65,19 @@ export default {
 		//const { searchParams } = new URL(request.url)
 		const dateReq = url.searchParams.get('date_req')
 
-		console.log(url.pathname + '   ' + dateReq)
+		//console.log(url.pathname + '   ' + dateReq)
 		const dateMatchReq = /(\d{2})\/(\d{2})\/(\d{4})/.exec(dateReq)
 		if (dateMatchReq) {
 			myDate = new Date(`${dateMatchReq[2]}/${dateMatchReq[1]}/${dateMatchReq[3]}`).toLocaleString('en-US', {
 				timeZone: 'Europe/Moscow'
 			});
-			console.log(`${dateMatchReq[2]}/${dateMatchReq[1]}/${dateMatchReq[3]}` + ' ' + myDate);
+		//	console.log(`${dateMatchReq[2]}/${dateMatchReq[1]}/${dateMatchReq[3]}` + ' ' + myDate);
 		}
-		console.log('myDate: ' + myDate + ' ' + myDate.timeZone);
+		//console.log('myDate: ' + myDate + ' ' + myDate.timeZone);
 
+		//////////////////// /favicon.ico /////////////////////////
 		if (url.pathname == "/favicon.ico") {
 			const buf = Buffer.from(b64str, 'base64')
-
 			return new Response(
 				buf,
 				{
@@ -84,50 +87,65 @@ export default {
 						"Content-Type": "image/x-icon"
 					}
 				}
-
-
-
 			)
+		/////////////////////////////////////////////////////////////
 		} else {
 			const xmlCbrRatesString = await getCbrRates(formatDateDDMMYYYY(myDate))
 			let jsn
 
-			if (url.pathname == "/api/v01/xml") {
+        //////////////////////// /api/v01/cbrf/xml //////////////////            
+			if (url.pathname == "/api/v01/cbrf/xml") {
 				return new Response(xmlCbrRatesString, {
 					headers: {
 						"Content-Type": "application/xml; charset=UTF-8"
 					}
 				});
-			} else if (url.pathname == "/api/v01/json") {
+
+		/////////////////////////////// /api/v01/cbrf/json //////////
+			} else if (url.pathname == "/api/v01/cbrf/json") {
 				xml2js.parseString(xmlCbrRatesString, { explicitArray: false, mergeAttrs: true }, (err, result) => {
 					if (err) throw err;
-
-					// JS object
-					//console.log(result);
-
-					// JSON string
 					jsn = JSON.stringify(result, null, 8);
-					//fs.writeFileSync("output.json", json);
 				});
 				return new Response(jsn, {
 					headers: {
 						"Content-Type": "application/json; charset=UTF-8"
 					}
 				});
+
+			} else if (url.pathname == "/api/v01/ipgeo/json"){
+				return new Response(
+					JSON.stringify(
+						{ 
+							continent,
+							country, 
+							region, 
+							region_code: regionCode,  
+							city, 
+							longitude, 
+							latitude, 
+							postal_code: postalCode, 							
+							cf_connecting_ip: request.headers.get('cf-connecting-ip'),
+							timezone,
+						},
+						null, 8,
+					),
+					{
+						headers: {
+							"Content-Type": "application/json; charset=UTF-8"
+						}
+					},
+				);
+			
+		/////////////////////////////// /index.html //////////////////
 			} else if (url.pathname == "/index.html") {
-				const { cf } = request || {};
-				const { country, city } = cf || {};
-				
+								
 				console.log(`country: ${country}, city: ${city}, cf-connecting-ip: ${request.headers.get('cf-connecting-ip')}`)
 				let items;
 				let myCaption;
 				xml2js.parseString(xmlCbrRatesString, { explicitArray: false, mergeAttrs: true }, (err, result) => {
-
 					if (err) throw err;
 					myCaption = `${result.ValCurs.Date} ${result.ValCurs.name}`
-					// JS object
-					//console.log(result);
-
 					items = Array.isArray(result.ValCurs.Valute) ? result.ValCurs.Valute : [result.ValCurs.Valute]
 				});
 				const headers = ["ID","NumCode", "CharCode", "Nominal", "Name", "Value", "VunitRate"];
@@ -139,7 +157,6 @@ export default {
 						return `<tr>${cells}</tr>`;
 					})
 					.join("");
-
 
 				const tableHtml = `
 <table>
@@ -235,6 +252,8 @@ ${tableHtml}
 
 
 			}
+
+		////////////////////////// any //////////////////////////
 			return new Response(`${myDate}`)
 
 		}
