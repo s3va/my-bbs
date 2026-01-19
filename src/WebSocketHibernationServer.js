@@ -175,7 +175,7 @@ export class WebSocketHibernationServer extends DurableObject {
 
     quitters.forEach(quitter => {
       if (quitter.user) {
-        this.broadcast({ quit: quitter.user + ` (${quitter.id.slice(-4)})` });
+        this.broadcast({ exit: quitter.user + ` (${quitter.id.slice(-4)})` });
       }
     });
   }
