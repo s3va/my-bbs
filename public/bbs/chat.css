@@ -1,0 +1,146 @@
+html { color-scheme: dark; }
+
+/* * {
+  box-sizing: border-box;
+} */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#chatlog {
+  position: fixed;
+  top: 0;
+  bottom: 32px;
+  left: 0;
+  right: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  overflow-wrap: break-word;
+}
+#chatlog span.username {
+  font-weight: bold;
+}
+#spacer {
+  height: calc(100vh - 32px - 5em);
+}
+
+#roster {
+  font-weight: bold;
+  padding: 8px;
+}
+
+/* p {
+  margin-top: 0;
+  margin-bottom: 8px;
+} */
+/* p:last-of-type {
+  margin: 0;
+} */
+
+.mymsg{
+  padding: 0 .3em 0 .3em;
+  border: solid 1px;
+  border-radius: 8px;
+  margin: 4px;
+  width: fit-content;
+
+}
+
+#roster {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 32px;
+  width: 200px;
+  border-left: none;
+}
+
+/* ::-webkit-scrollbar {
+  display: none;
+} */
+
+@media(max-width:600px) {
+  #roster { display: none; }
+  #chatlog { right: 0; }
+}
+
+#chat-input {
+  position: fixed;
+  width: 100%;
+  height: 32px;
+  bottom: 0;
+  left: 0;
+  border: none;
+  border-top: none;
+  padding-left: 32px;
+  outline: none;
+}
+#chatroom{
+  z-index: 1;
+}
+#chatroom::before {
+  z-index: 1;
+  display: block;
+  content: ">";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  text-align: center;
+  font-weight: bold;
+  color: #888;
+  -webkit-text-stroke-width: 2px;
+}
+
+.selectchat {
+  z-index: 2;
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
+
+.chatlist {
+  padding: 0 1em 0 1em;
+  border: solid;
+  width: fit-content;
+}
+
+#room-form {
+  z-index: 2;
+  margin-top: 2em;
+  width: fit-content;
+}
+
+#room-name {
+  font-size: inherit;
+  /* border: 1px solid #bbb; */
+  border: 1px solid ;
+  height: 2em;
+  width: 16em;
+  padding-left: 1em;
+}
+
+#room-form button {
+  font-size: inherit;
+  /* border: 1px solid #bbb;
+  background-color: #eee; */
+  height: 2em;
+}
+
+/* @media(max-width:660px) {
+  #name-input, #room-form { font-size: 150%; }
+  #name-form p { font-size: 75%; }
+}
+@media(max-width:500px) {
+  #name-input, #room-form { font-size: 100%; }
+  #name-form p { font-size: 50%; }
+} */
+
+#go-public {
+  width: 4em;
+}
+#go-private {
+  width: 20em;
+}
