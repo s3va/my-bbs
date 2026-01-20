@@ -154,7 +154,14 @@ export default {
 					}
 				},
 			);
-
+			/////////////////////////// /api/v01/chat/uuidgen 	
+		} else if (url.pathname == "/api/v01/chat/uuidgen") {
+			if (request.method == "POST") {
+				let id = env.WEBSOCKET_HIBERNATION_SERVER.newUniqueId();
+				return new Response(id.toString(), { headers: { "Access-Control-Allow-Origin": "*" } });
+			} else {
+				return new Response("Method not allowed", {status: 405});
+			}
 			/////////////////////////////// /index.html //////////////////
 		} else if (url.pathname == "/index.html") {
 
@@ -310,12 +317,13 @@ body {
 				return r;
 			}
 			const r1 = await env.bbs_d1_db.prepare("SELECT chatname FROM Chats").all();
-			
-			const chatList = ( r1?.success && Array.isArray(r1.results)) ?
+
+			const chatList = (r1?.success && Array.isArray(r1.results)) ?
 				`<div class="chatlist"><ol>
-    ${r1.results?.map(row => `<li><a href="#${row.ChatName.replaceAll(" ","%20")}"  onclick="location.hash='#${row.ChatName.replaceAll(" ","%20")}'; location.reload(); return false;">${row.ChatName}</li>\n`).join('')}
- </ol></div>
- `
+
+${r1.results?.map(row => `        <li><a href="#${row.ChatName.replaceAll(" ", "%20")}"  onclick="location.hash='#${row.ChatName.replaceAll(" ", "%20")}'; location.reload(); return false;">${row.ChatName}</a></li>\n`).join('')}
+	  </ol></div>
+`
 				:
 				'<h4>No chats yet</h4>'
 				;
@@ -350,10 +358,9 @@ body {
         <button id="go-private">Create a Private Room &raquo;</button>
       </form>
 	</div>
-
+  	<script>window.username = "${r}" ;</script>
+  	<script src="chat.js"></script>
   </body>
-  <script>window.username = "${r}" ;</script>
-  <script src="chat.js"></script>
 </html>  
 			`;
 
@@ -393,6 +400,9 @@ body {
 			if (r instanceof Response) {
 				return r;
 			}
+			url.pathname = "/bbs/logout"
+			url.username = "log"
+			url.password = "out"
 			return new Response(
 				`<!DOCTYPE html>
 <html>
@@ -412,7 +422,7 @@ body {
 	<h1>You are logged in BBS as ${r}.</h1>
 	<p>🎉 You have private access!</p>
 	<a href="chat">Chat</a>
-	<a href="logout">logout</a>
+	<a href="${url.toString()}">logout</a>
 </body>
 </html>
 
@@ -604,7 +614,7 @@ body {
 
 			// Since we are hard coding the Durable Object ID by providing the constant name 'foo',
 			// all requests to this Worker will be sent to the same Durable Object instance.
-			let id = env.WEBSOCKET_HIBERNATION_SERVER.idFromName("chatName");
+			let id = env.WEBSOCKET_HIBERNATION_SERVER.idFromName(chatName);
 			let stub = env.WEBSOCKET_HIBERNATION_SERVER.get(id);
 
 			return stub.fetch(request);

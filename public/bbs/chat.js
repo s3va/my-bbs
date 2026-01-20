@@ -62,7 +62,7 @@ function startRoomChooser() {
     event.currentTarget.disabled = true;
 
     // let response = await fetch("https://" + hostname + "/api/room", {method: "POST"});
-    let response = await fetch("/api/room", {method: "POST"});
+    let response = await fetch("/api/v01/chat/uuidgen", {method: "POST"});
     if (!response.ok) {
       alert("something went wrong");
       document.location.reload();
